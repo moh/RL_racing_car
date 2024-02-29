@@ -12,7 +12,7 @@ In <b>src</b> directory:
 
 To run the code, in terminal: 
 - To train: *$python main.py train*
-- To test saved model: *$python main.py test$*
+- To test saved model: *$python main.py test*
 
 In both case, you will be asked to input the used parameters.
 
