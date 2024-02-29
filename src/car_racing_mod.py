@@ -42,7 +42,7 @@ SCALE = 6.0  # Track scale
 TRACK_RAD = 900 / SCALE  # Track is heavily morphed circle with this radius
 PLAYFIELD = 2000 / SCALE  # Game over boundary
 FPS = 50  # Frames per second
-ZOOM = 1  # Camera zoom
+ZOOM = 2.7  # Camera zoom
 ZOOM_FOLLOW = True  # Set to False for fixed view (don't use zoom)
 
 
@@ -58,7 +58,7 @@ MAX_SHAPE_DIM = (
 
 # variables for obstacles
 OBSTACLE_SIZE = 1.0
-OBSTACLE_DYNAMIC = False
+OBSTACLE_DYNAMIC = True
 
 
 class FrictionDetector(contactListener):
@@ -100,21 +100,27 @@ class FrictionDetector(contactListener):
 
     def _contact(self, contact, begin):
         tile, obstacle, obj, two_obstacles = self._check_objects(contact)
-        self._on_car_tile_contact(tile, obj, begin)
+        self._on_car_tile_contact(tile, obstacle, obj, begin)
         self._on_car_obstacle_contact(tile, obstacle, obj, two_obstacles)
         
 
     # here we update reward of the car 
-    def _on_car_tile_contact(self, tile, obj, begin):
+    def _on_car_tile_contact(self, tile, obstacle, obj, begin):
         if not tile:
             return
         
+        if not obstacle:
+            # test, reward it if it stays on track
+            self.env.reward += 1
+
         # inherit tile color from env
         tile.color[:] = self.env.road_color
         if not obj or "tiles" not in obj.__dict__:
             return
+
         if begin:
             obj.tiles.add(tile)
+            
 
             if not tile.road_visited:
                 tile.road_visited = True
@@ -244,7 +250,7 @@ class CarRacing(gym.Env, EzPickle):
         render_mode: Optional[str] = None,
         verbose: bool = False,
         lap_complete_percent: float = 0.95,
-        obstacle_prob: float = 0.1,
+        obstacle_prob: float = 0.0,
         domain_randomize: bool = False,
         continuous: bool = True,
     ):
@@ -643,7 +649,7 @@ class CarRacing(gym.Env, EzPickle):
         terminated = False
         truncated = False
         if action is not None:  # First step without action, called from reset()
-            self.reward -= 0.1
+            self.reward -= 0.3# 0.1
             # We actually don't want to count fuel spent, we want car to be faster.
             # self.reward -=  10 * self.car.fuel_spent / ENGINE_POWER
             self.car.fuel_spent = 0.0
@@ -662,6 +668,18 @@ class CarRacing(gym.Env, EzPickle):
         if self.render_mode == "human":
             self.render()
         return self.state, step_reward, terminated, truncated, {}
+    
+    # get random action
+    def random_action(self):
+        if self.continuous:
+            low = self.action_space.low
+            high = self.action_space.high
+            action = np.random.uniform(low = low, high = high)
+        
+        else:
+            action = self.action_space.sample()
+        
+        return action
 
     def render(self):
         if self.render_mode is None:
@@ -852,7 +870,7 @@ class CarRacing(gym.Env, EzPickle):
             x, y = obstacle.position.x, obstacle.position.y
             
             color = obstacle.color
-            rad = int(obstacle.fixtures[0].shape.radius * SCALE)
+            rad = int(obstacle.fixtures[0].shape.radius * SCALE * ZOOM)
 
             x = ((x - self.car.hull.position[0]) * zoom)
             y = ((-y + self.car.hull.position[1]) * zoom)
@@ -939,7 +957,7 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 quit = True
 
-    env = CarRacing(render_mode="human", verbose=True)
+    env = CarRacing(render_mode="human", obstacle_prob = 0.1, verbose=True)
 
     quit = False
     while not quit:
