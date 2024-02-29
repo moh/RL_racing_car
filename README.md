@@ -10,6 +10,18 @@ In <b>src</b> directory:
 - To play (manual action), run *$ python car_racing_mod.py* 
 
 
+To run the code, in terminal: 
+- To train: *$python main.py train*
+- To test saved model: *$python main.py test$*
+
+In both case, you will be asked to input the used parameters.
+
+The action space is Discrete and is not the same as the original one. 
+You can change it in the function *custom_step* in the file *agents/help_func.py*.
+**Don't forget to change the value of NUMBER_ACTIONS in the same file.**
+
+
+
 **Note**:
 $ *pip install gymansium* 
 and not gym
