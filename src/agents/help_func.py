@@ -271,6 +271,16 @@ def custom_step(env, action):
 
     return env.step(customized_actions[action])
 
+# This function will be applied after env.reset and before learning loop
+def after_reset_action(env):
+    # env car should be in continous action mode
+    
+    print("Waiting for zoom")
+    for i in range(50):
+        _  = env.step([0.0, 0.0, 0.0])
+    print("Waiting for zoom FINISHED")
+
+
 def test_agent(env: gym.Env,
                 q_network: torch.nn.Module,
                 num_episodes: int,
@@ -285,6 +295,10 @@ def test_agent(env: gym.Env,
     
     for episode_index in tqdm(range(1, num_episodes)):
         state, info = env.reset()
+        
+        # some action before learning, defined in help_func.py
+        after_reset_action(env)
+
         total_reward = 0
 
         for t in itertools.count():
@@ -297,6 +311,8 @@ def test_agent(env: gym.Env,
             if (total_reward < min_rewad): done = True
 
             if done: break
+
+            state = s_after
 
         total_reward_list.append(total_reward)
 

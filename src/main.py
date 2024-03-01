@@ -12,30 +12,6 @@ import numpy as np
 import sys
 
 
-# NOT USED 
-
-# perform result state frame preprocessing
-def rgb_to_grayscale(screen):
-    # create transcormation that transforms imag to grayscale
-    transformation = trans.Compose([trans.ToTensor(), trans.ToPILImage(), trans.Grayscale(), trans.ToTensor()])
-
-    # remove negative axis values from tensor
-    # (they are just there somehow and this fixes them to start at zero)
-    screen = np.flip(screen, axis = 0).copy()
-    screen = np.flip(screen, axis=0).copy()
-    # perform afforementioned transformation
-    screen = transformation(screen).to(device)
-
-    # cut track features from image
-    track = screen[:, :66, 15:81]
-    track[track < 0.5] = 0
-    track[track > 0.5] = 1
-    track = track.view(1, 1, 66, 66)
-
-
-    return track
-
-
 class CNNModel(nn.Module):
     def __init__(self, len_action_space):
         super(CNNModel, self).__init__()
@@ -48,6 +24,7 @@ class CNNModel(nn.Module):
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
         self.fc1 = nn.Linear(12 * 6 * 6, 216)
+        self.dropout1 = nn.Dropout(0.2)
         self.fc2 = nn.Linear(216, len_action_space)
 
     def forward(self, x):
@@ -61,6 +38,7 @@ class CNNModel(nn.Module):
         x = self.pool2(x)
         x = self.flatten(x)
         x = torch.relu(self.fc1(x))
+        x = self.dropout1(x)
         x = self.fc2(x)
 
         return x
@@ -74,14 +52,21 @@ class CNNModel(nn.Module):
 def test_saved_model():
     file = input("saved .pth file : ")
     model = torch.load(file, map_location = device)
-    env = CarRacing(render_mode="human", obstacle_prob = 0)
-
-    test_agent(env, model, 10, -30)
+    car_vesion = input("Original gym car env ? (y/n) : ")
+    
+    car_env = car_racing.CarRacing(render_mode="human")
+    
+    if car_vesion == "n":
+        car_env = car_racing_mod.CarRacing(render_mode="human")
+    
+    
+    test_agent(car_env, model, 10, -30)
 
 
 def train_model():
     available_algos = ["naive_dqn", "dqn1", "dqn2"]
-    params = ["number_of_trainings", "num_episodes", "epsilon_start", "gamma", "min_reward", "save_model_dir"]
+    params = ["number_of_trainings", "num_episodes", "epsilon_start",
+              "epsilon_decay", "gamma", "min_reward", "save_model_dir"]
     params_value = dict()
 
     print("Available algos : ", available_algos)
@@ -106,6 +91,7 @@ def train_model():
         env = car_env()
     else:
         env = car_env(render_mode="human")
+
 
     if algo == "naive_dqn":
         q_network = CNNModel(NUMBER_ACTIONS)

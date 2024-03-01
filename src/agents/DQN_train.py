@@ -19,6 +19,7 @@ def dqn_naive_agent_training(env, q_network, params):
 
     number_of_trainings = int(params["number_of_trainings"])
     epsilon_start = float(params["epsilon_start"])
+    epsilon_decay = float(params["epsilon_decay"])
     num_episodes = int(params["num_episodes"])
     gamma = float(params["gamma"])
     min_reward = float(params["min_reward"])
@@ -36,7 +37,7 @@ def dqn_naive_agent_training(env, q_network, params):
         lr_scheduler = MinimumExponentialLR(optimizer, lr_decay=0.97, min_lr=0.0001)
         loss_fn = torch.nn.MSELoss()
 
-        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=0.9675, env=env, q_network=q_network)
+        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=epsilon_decay, env=env, q_network=q_network)
 
 
         episode_reward_list = train_naive_agent(env,
@@ -65,6 +66,7 @@ def dqn1_agent_training(env, q_network, params):
 
     number_of_trainings = int(params["number_of_trainings"])
     epsilon_start = float(params["epsilon_start"])
+    epsilon_decay = float(params["epsilon_decay"])
     num_episodes = int(params["num_episodes"])
     gamma = float(params["gamma"])
     min_reward = float(params["min_reward"])
@@ -82,7 +84,7 @@ def dqn1_agent_training(env, q_network, params):
         lr_scheduler = MinimumExponentialLR(optimizer, lr_decay=0.97, min_lr=0.0001)
         loss_fn = torch.nn.MSELoss()
 
-        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=0.9675, env=env, q_network=q_network)
+        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=epsilon_decay, env=env, q_network=q_network)
 
 
         # Train the q-network
@@ -115,6 +117,7 @@ def dqn2_agent_training(env, q_network, target_q_network, params):
 
     number_of_trainings = int(params["number_of_trainings"])
     epsilon_start = float(params["epsilon_start"])
+    epsilon_decay = float(params["epsilon_decay"])
     num_episodes = int(params["num_episodes"])
     gamma = float(params["gamma"])
     min_reward = float(params["min_reward"])
@@ -137,7 +140,7 @@ def dqn2_agent_training(env, q_network, target_q_network, params):
         lr_scheduler = MinimumExponentialLR(optimizer, lr_decay=0.97, min_lr=0.0001)
         loss_fn = torch.nn.MSELoss()
 
-        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=0.9675, env=env, q_network=q_network)
+        epsilon_greedy = EpsilonGreedy(epsilon_start=epsilon_start, epsilon_min=0.013, epsilon_decay=epsilon_decay, env=env, q_network=q_network)
 
         replay_buffer = ReplayBuffer(2000)
 

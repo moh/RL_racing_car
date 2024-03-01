@@ -13,7 +13,6 @@ from agents.help_func import *
 
 
 
-
 def train_naive_agent(env: gym.Env,
                       q_network: torch.nn.Module,
                       optimizer: torch.optim.Optimizer,
@@ -61,6 +60,9 @@ def train_naive_agent(env: gym.Env,
 
     for episode_index in tqdm(range(1, num_episodes)):
         state, info = env.reset()
+        # some action before learning, defined in help_func.py
+        after_reset_action(env)
+
         episode_reward = 0
 
         local_reward_list = []
@@ -98,8 +100,6 @@ def train_naive_agent(env: gym.Env,
         epsilon_greedy.decay_epsilon()
 
     return episode_reward_list
-
-
 
 
     
@@ -156,6 +156,10 @@ def train_dqn1_agent(env: gym.Env,
 
     for episode_index in tqdm(range(1, num_episodes)):
         state, info = env.reset()
+        
+        # some action before learning, defined in help_func.py
+        after_reset_action(env)
+
         episode_reward = 0
 
         local_rewards = []
@@ -276,6 +280,10 @@ def train_dqn2_agent(env: gym.Env,
 
     for episode_index in tqdm(range(1, num_episodes)):
         state, info = env.reset()
+        
+        # some action before learning, defined in help_func.py
+        after_reset_action(env)
+
         episode_reward = 0
 
         local_reward_list = []
