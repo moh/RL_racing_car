@@ -76,8 +76,8 @@ def train_naive_agent(env: gym.Env,
             episode_reward += r
             s_after_tensor = torch.tensor(s_after, dtype=torch.float32, device=device).unsqueeze(0)
             state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-            max_qa_s_after = torch.max(q_network(s_after_tensor))
-            loss = loss_fn(r + gamma * max_qa_s_after, q_network(state_tensor)[0, a])
+            max_qa_s_after = torch.max(q_network(s_after_tensor)) #### pourquoi pas .values() ou .item() ####
+            loss = loss_fn(r + gamma * max_qa_s_after, q_network(state_tensor)[0, a]) 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -192,7 +192,7 @@ def train_dqn1_agent(env: gym.Env,
               batch_q_netword_pred_tensor = q_network(batch_next_states_tensor)
               batch_yj_tensor = batch_rewards_tensor + gamma * torch.max(batch_q_netword_pred_tensor, dim=1).values * (1 - batch_dones_tensor)
 
-              second_part = q_network(batch_states_tensor).gather(1, batch_actions_tensor.unsqueeze(1)).squeeze()
+              second_part = q_network(batch_states_tensor).gather(1, batch_actions_tensor.unsqueeze(1)).squeeze() ### je ne comprends pas l'opération gather ###
               
               loss = loss_fn(batch_yj_tensor, second_part)
 
@@ -341,7 +341,6 @@ def train_dqn2_agent(env: gym.Env,
             
             if done:
                 break
-
             state = next_state
         
         print("reward at the end = ", episode_reward)

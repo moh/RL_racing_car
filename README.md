@@ -23,6 +23,4 @@ You can change it in the function *custom_step* in the file *agents/help_func.py
 
 
 **Note**:
-$ *pip install gymansium* 
-and not gym
-You will also need swig, Box2D
+$ *python -m pip install -r requirements.txt* 

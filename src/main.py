@@ -40,7 +40,6 @@ class CNNModel(nn.Module):
         x = torch.relu(self.fc1(x))
         x = self.dropout1(x)
         x = self.fc2(x)
-
         return x
 
 
