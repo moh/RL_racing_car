@@ -6,12 +6,15 @@ import itertools
 from tqdm import tqdm
 import collections
 import random
+import os
+import json
+import imageio
 
 from typing import List, Tuple, Deque, Optional, Callable
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-NUMBER_ACTIONS = 9
+NUMBER_ACTIONS = 5
 
 class EpsilonGreedy:
     """
@@ -228,6 +231,94 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
+
+class DataSaver:
+    """
+    Class used to save model data and rewards during the training
+    """
+
+    def __init__(self, results_dir, model_file_name, save_frequency):
+        self.results_dir = results_dir
+        self.model_file_name = model_file_name
+        
+        self.save_frequency = save_frequency
+
+        self.last_saved_file = ""
+        self.__create_json_file()
+
+        # this is for recording the game, a list of rgb array representing the screen
+        self.rgb_data = []
+        self.last_max_reward = 0
+
+    
+    def __create_json_file(self):
+        json_file_path = os.path.join(self.results_dir + "/rewards", self.model_file_name + "_rewards.json")
+        
+        if not os.path.exists(json_file_path):
+            with open(json_file_path, 'w') as file:
+                json.dump(
+                    {'data' : []}, file, indent = 2)
+        else:
+            print("\n!!!! REWARDS JSON FILE ALREADY EXISTS !!!!\n")
+
+
+
+    def save_model_data(self, q_network, episode, last = False):
+        
+        model_file = os.path.join(self.results_dir, self.model_file_name + "_" + str(episode) + ".pth")
+
+        if (episode % self.save_frequency == 0) or last:
+            print("Saving model ..............")
+            torch.save(q_network, model_file)
+
+            # remove the last saved file if it exists
+            if self.last_saved_file != "" and os.path.exists(self.last_saved_file):
+                os.remove(self.last_saved_file)
+            self.last_saved_file = model_file
+
+    
+    def save_rewards_data(self, rewards_dict, episode):
+        json_file_path = os.path.join(self.results_dir + "/rewards", self.model_file_name + "_rewards.json")
+        final_dict = {"episode" : episode, "rewards" : rewards_dict}
+
+        with open(json_file_path, 'r') as file:
+            existing_data = json.load(file)
+
+        data_list = existing_data.get("data", [])
+        data_list.append(final_dict)
+
+        existing_data["data"] = data_list
+
+        with open(json_file_path, 'w') as file:
+            json.dump(existing_data, file, indent = 2)
+
+    
+    def save_params_to_json(self, params):
+        # save parameters to params_info.json
+        json_file = os.path.join(self.results_dir, "params_info.json")
+
+        with open(json_file, 'r') as file:
+            existing_data = json.load(file)
+
+        existing_data.update({self.model_file_name : params})
+
+        with open(json_file, 'w') as file:
+            json.dump(existing_data, file, indent = 2)
+
+    def update_rgb_data(self, rgb_array):
+        self.rgb_data.append(rgb_array)
+
+    def save_gif(self, reward):
+        video_file_path = os.path.join(self.results_dir + "/records", self.model_file_name + "_max.gif")
+        if (reward > self.last_max_reward):
+            print("[INFO] SAVING GIF ...... ")
+            imageio.mimsave(video_file_path, [np.array(img) for img in self.rgb_data], fps = 29)
+            self.last_max_reward = reward
+
+        self.rgb_data = []
+
+
+
 def custom_step(env, action):
     """
     customized_actions = [
@@ -255,26 +346,37 @@ def custom_step(env, action):
         [1.0, 0.0, 0.0], # right
         [0.0, 1.0, 0.0], # gas
         [0.0, 0.0, 0.5],
+        [0.0, 0.0, 0.0],
 
         # some soft actions
-        [-1.0, 1.0, 0.0],
-        [-0.5, 0.5, 0.0],
-        [1.0, 1.0, 0.0],
-        [0.5, 0.5, 0.0],
-
-        [0.0, 0.5, 0.0],
-        
+        #[-1.0, 1.0, 0.0],
+        #[-0.5, 0.5, 0.0],
+        #[1.0, 1.0, 0.0],
+        #[0.5, 0.5, 0.0],
+        #[0.0, 0.5, 0.0],
     ]
 
     # check that NUMBER_ACTIONS is the real number of actions
     assert NUMBER_ACTIONS == len(customized_actions)
 
-    return env.step(customized_actions[action])
+    result = env.step(customized_actions[action])
+
+    # save the rgb array, which is the state
+    env.data_saver.update_rgb_data(result[0])
+
+    return result
+
+
+
+
+
+
+
 
 # This function will be applied after env.reset and before learning loop
 def after_reset_action(env):
     # env car should be in continous action mode
-    
+    return
     print("Waiting for zoom")
     for i in range(50):
         _  = env.step([0.0, 0.0, 0.0])
@@ -303,7 +405,12 @@ def test_agent(env: gym.Env,
 
         for t in itertools.count():
             state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-            a = torch.argmax(q_network(state_tensor)).item()
+            logits = torch.nn.Softmax()(q_network(state_tensor))
+            
+            dist=torch.distributions.categorical.Categorical(probs=logits)
+            a = torch.argmax(logits).item() #dist.sample().item() 
+            
+            print(a)
             s_after, r, done = custom_step(env, a)[:3]
             total_reward += r
             

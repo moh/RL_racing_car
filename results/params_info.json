@@ -1,0 +1,12 @@
+{
+  "strict_wih_envmod": {
+    "num_episodes": "200",
+    "epsilon_start": "0.8",
+    "epsilon_decay": "0.99",
+    "gamma": "0.99",
+    "min_reward": "-30",
+    "results_dir": "../results",
+    "model_file_name": "strict_wih_envmod",
+    "save_frequency": "20"
+  }
+}

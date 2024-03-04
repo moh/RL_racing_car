@@ -40,6 +40,7 @@ class CNNModel(nn.Module):
         x = torch.relu(self.fc1(x))
         x = self.dropout1(x)
         x = self.fc2(x)
+
         return x
 
 
@@ -63,9 +64,23 @@ def test_saved_model():
 
 
 def train_model():
-    available_algos = ["naive_dqn", "dqn1", "dqn2"]
-    params = ["number_of_trainings", "num_episodes", "epsilon_start",
-              "epsilon_decay", "gamma", "min_reward", "save_model_dir"]
+    available_algos = ["naive_dqn", "dqn1", "dqn2", "dqn2_strict"]
+
+    common_params = ["num_episodes", "epsilon_start",
+              "epsilon_decay", "gamma", "min_reward", 
+              "results_dir", "model_file_name", "save_frequency"]
+
+    params = {
+        "naive_dqn" : common_params,
+        "dqn1" : common_params, 
+        "dqn2" : common_params,
+        "dqn2_strict" : ["num_episodes", "epsilon_start",
+              "epsilon_decay", "gamma", "min_reward", "max_nb_negative",  
+              "results_dir", "model_file_name", "save_frequency"]
+    }
+    
+    
+    
     params_value = dict()
 
     print("Available algos : ", available_algos)
@@ -74,10 +89,10 @@ def train_model():
     if not(algo in available_algos):
         raise Exception("Algo : " + algo + " not supported")
 
-    for p in params:
+    for p in params[algo]:
         params_value[p] = input(p + " : ")
 
-    print("\nrender mode : human, nothing (press ENTER)")
+    print("Render mode : human, nothing (press ENTER)")
     render_mode = input("Render mode : ")
     car_vesion = input("Original gym car env ? (y/n) : ")
     
@@ -104,6 +119,11 @@ def train_model():
         q_network = CNNModel(NUMBER_ACTIONS)
         target_q_network = CNNModel(NUMBER_ACTIONS)
         dqn2_agent_training(env, q_network, target_q_network, params_value)
+
+    elif algo == "dqn2_strict":
+        q_network = CNNModel(NUMBER_ACTIONS)
+        target_q_network = CNNModel(NUMBER_ACTIONS)
+        dqn2_strict_agent_training(env, q_network, target_q_network, params_value)
 
 
 
