@@ -316,7 +316,7 @@ def train_dqn2_agent(env: gym.Env,
 
             action = epsilon_greedy(state)
 
-            next_state, reward, terminated, truncated, info = custom_step(env, action)# env.step(action)
+            next_state, reward, terminated, truncated, info = custom_step(env, action) # env.step(action)
             done = terminated or truncated
 
             replay_buffer.add(state, action, reward, next_state, done)
@@ -539,3 +539,76 @@ def train_dqn2_strict_agent(env: gym.Env,
         epsilon_greedy.decay_epsilon()
 
     return episode_reward_list
+
+
+
+def train_reinforce_discrete(env: gym.Env,
+                             num_train_episodes: int,
+                             num_test_per_episode: int,
+                             max_episode_duration: int,
+                             learning_rate: float,
+                             min_reward: float,
+                             policy_nn: torch.nn.Module,
+                             data_saver) -> Tuple[torch.nn.Module, List[float]]:
+    """
+    Train a policy using the REINFORCE algorithm.
+
+    Parameters
+    ----------
+    env : gym.Env
+        The environment to train in.
+    num_train_episodes : int
+        The number of training episodes.
+    num_test_per_episode : int
+        The number of tests to perform per episode.
+    max_episode_duration : int
+        The maximum length of an episode, by default EPISODE_DURATION.
+    learning_rate : float
+        The initial step size.
+
+    Returns
+    -------
+    Tuple[PolicyNetwork, List[float]]
+        The final trained policy and the average returns for each episode.
+    """
+    episode_avg_return_list = []
+
+    optimizer = torch.optim.Adam(policy_nn.parameters(), lr=learning_rate)
+
+    for episode_index in tqdm(range(num_train_episodes)):
+
+        # TODO...
+        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(env, policy_nn, max_episode_duration, min_reward=min_reward)
+        returns = []
+        for i in range(len(episode_rewards)):
+            returns.append(sum(episode_rewards[i:]))
+
+        returns = torch.tensor(returns, dtype=torch.float32, device=device)
+        log_prob_actions = torch.stack(episode_log_prob_actions)
+        loss = -torch.sum(log_prob_actions * returns)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Test the current policy
+        test_avg_return = avg_return_on_multiple_episodes(env=env,
+                                                          policy_nn=policy_nn,
+                                                          num_test_episode=num_test_per_episode,
+                                                          max_episode_duration=max_episode_duration,
+                                                          min_reward=min_reward,
+                                                          render=False)
+        
+        # max reward
+        max_reward = max(episode_rewards)
+        print("reward at the end = ", test_avg_return)
+        print("reward max        = ", max_reward)
+
+        # save model and rewards 
+        data_saver.save_model_data(policy_nn, episode_index)
+        data_saver.save_rewards_data(
+            {"final" : test_avg_return, "max" : max_reward},
+            episode_index)
+        data_saver.save_gif(max_reward)
+        # Monitoring
+        episode_avg_return_list.append(test_avg_return)
+    return policy_nn, episode_avg_return_list

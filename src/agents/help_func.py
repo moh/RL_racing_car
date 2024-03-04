@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+from numpy.typing import NDArray
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 import itertools
@@ -255,6 +256,7 @@ class DataSaver:
         json_file_path = os.path.join(self.results_dir + "/rewards", self.model_file_name + "_rewards.json")
         
         if not os.path.exists(json_file_path):
+            os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
             with open(json_file_path, 'w') as file:
                 json.dump(
                     {'data' : []}, file, indent = 2)
@@ -296,6 +298,9 @@ class DataSaver:
     def save_params_to_json(self, params):
         # save parameters to params_info.json
         json_file = os.path.join(self.results_dir, "params_info.json")
+        if not os.path.exists(json_file):
+            with open(json_file, 'w') as file:
+                json.dump({}, file, indent = 2)
 
         with open(json_file, 'r') as file:
             existing_data = json.load(file)
@@ -425,3 +430,128 @@ def test_agent(env: gym.Env,
         total_reward_list.append(total_reward)
 
     return total_reward_list
+
+
+def sample_discrete_action(policy_nn: torch.nn.Module,
+                           state: NDArray[np.float64]) -> Tuple[int, torch.Tensor]:
+    """
+    Sample a discrete action based on the given state and policy network.
+
+    This function takes a state and a policy network, and returns a sampled action and its log probability.
+    The action is sampled from a categorical distribution defined by the output of the policy network.
+
+    Parameters
+    ----------
+    policy_nn : PolicyNetwork
+        The policy network that defines the probability distribution of the actions.
+    state : NDArray[np.float64]
+        The state based on which an action needs to be sampled.
+
+    Returns
+    -------
+    Tuple[int, torch.Tensor]
+        The sampled action and its log probability.
+
+    """
+
+    # TODO...
+    state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+    action_probabilities = policy_nn(state_tensor)
+    action_distribution = torch.distributions.Categorical(torch.nn.functional.softmax(action_probabilities, dim=1))
+    sampled_action = action_distribution.sample()
+    sampled_action_log_probability = action_distribution.log_prob(sampled_action)
+    sampled_action = sampled_action.item() 
+    # Return the sampled action and its log probability.
+    return sampled_action, sampled_action_log_probability
+
+
+def sample_one_episode(env: gym.Env,
+                       policy_nn: torch.nn.Module,
+                       max_episode_duration: int,
+                       min_reward: float,
+                       render: bool = False) -> Tuple[List[NDArray[np.float64]], List[int], List[float], List[torch.Tensor]]:
+    """
+    Execute one episode within the `env` environment utilizing the policy defined by the `policy_nn` parameter.
+
+    Parameters
+    ----------
+    env : gym.Env
+        The environment to play in.
+    policy_nn : PolicyNetwork
+        The policy neural network.
+    max_episode_duration : int
+        The maximum duration of the episode.
+    render : bool, optional
+        Whether to render the environment, by default False.
+
+    Returns
+    -------
+    Tuple[List[NDArray[np.float64]], List[int], List[float], List[torch.Tensor]]
+        The states, actions, rewards, and log probability of action for each time step in the episode.
+    """
+    state_t, info = env.reset()
+
+    episode_states = []
+    episode_actions = []
+    episode_log_prob_actions = []
+    episode_rewards = []
+    episode_states.append(state_t)
+
+    for t in range(max_episode_duration):
+
+        if render:
+            env.render_wrapper.render()
+        # TODO...
+        action, log_prob_action = sample_discrete_action(policy_nn, state_t)
+        next_state, reward, done, info, truncated = custom_step(env, action)
+        episode_states.append(next_state)
+        episode_actions.append(action)
+        episode_rewards.append(reward)
+        episode_log_prob_actions.append(log_prob_action)
+        state_t = next_state
+
+        if done:
+            break
+        
+        total_reward = sum(episode_rewards)
+        if total_reward < min_reward:
+            break
+
+    return episode_states, episode_actions, episode_rewards, episode_log_prob_actions
+
+
+def avg_return_on_multiple_episodes(env: gym.Env,
+                                    policy_nn: torch.nn.Module,
+                                    num_test_episode: int,
+                                    max_episode_duration: int,
+                                    min_reward: float,
+                                    render: bool = False) -> float:
+    """
+    Play multiple episodes of the environment and calculate the average return.
+
+    Parameters
+    ----------
+    env : gym.Env
+        The environment to play in.
+    policy_nn : PolicyNetwork
+        The policy neural network.
+    num_test_episode : int
+        The number of episodes to play.
+    max_episode_duration : int
+        The maximum duration of an episode.
+    render : bool, optional
+        Whether to render the environment, by default False.
+
+    Returns
+    -------
+    float
+        The average return.
+    """
+
+    # TODO...
+    returns = []
+    for i in range(num_test_episode):
+        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(env, policy_nn, max_episode_duration, min_reward, render)
+        returns.append(sum(episode_rewards))
+    average_return = sum(returns) / num_test_episode
+    return average_return
