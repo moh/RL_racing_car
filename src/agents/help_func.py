@@ -362,7 +362,8 @@ def custom_step(env, action):
     result = env.step(customized_actions[action])
 
     # save the rgb array, which is the state
-    env.data_saver.update_rgb_data(result[0])
+    if hasattr(env, "data_saver"):
+        env.data_saver.update_rgb_data(result[0])
 
     return result
 
