@@ -399,7 +399,7 @@ def test_agent(env: gym.Env,
     q_network.to(device)
     q_network.eval()
 
-    total_reward_list = []    
+    test_parameters = {}     
     
     for episode_index in tqdm(range(1, num_episodes)):
         state, info = env.reset()
@@ -408,6 +408,8 @@ def test_agent(env: gym.Env,
         after_reset_action(env)
 
         total_reward = 0
+        reward_list = []
+        action_list = []
 
         for t in itertools.count():
             state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
@@ -416,9 +418,10 @@ def test_agent(env: gym.Env,
             dist=torch.distributions.categorical.Categorical(probs=logits)
             a = torch.argmax(logits).item() #dist.sample().item() 
             
-            print(a)
             s_after, r, done = custom_step(env, a)[:3]
             total_reward += r
+            reward_list.append(r)
+            action_list.append(a)
             
 
             if (total_reward < min_rewad): done = True
@@ -427,9 +430,10 @@ def test_agent(env: gym.Env,
 
             state = s_after
 
-        total_reward_list.append(total_reward)
+        episode_params = {"total_reward" : total_reward, "rewards": reward_list, "actions":action_list}
+        test_parameters[episode_index] = episode_params
 
-    return total_reward_list
+    return test_parameters
 
 
 def sample_discrete_action(policy_nn: torch.nn.Module,

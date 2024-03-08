@@ -60,7 +60,10 @@ def test_saved_model():
         car_env = car_racing_mod.CarRacing(render_mode="human")
     
     
-    test_agent(car_env, model, 10, -30)
+    params = test_agent(car_env, model, 10, -30)
+    title = "../results/testing_data/testing_data_" + file.split("/")[-1].split(".")[-2] # get file name from filepath
+    with open(title+".json", "w") as outfile:
+        json.dump(params, outfile)
 
 
 def train_model():
