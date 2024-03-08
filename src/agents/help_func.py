@@ -315,6 +315,10 @@ class DataSaver:
 
     def save_gif(self, reward):
         video_file_path = os.path.join(self.results_dir + "/records", self.model_file_name + "_max.gif")
+        
+        if not os.path.exists(video_file_path):
+            os.makedirs(os.path.dirname(video_file_path), exist_ok=True)
+
         if (reward > self.last_max_reward):
             print("[INFO] SAVING GIF ...... ")
             imageio.mimsave(video_file_path, [np.array(img) for img in self.rgb_data], fps = 29)

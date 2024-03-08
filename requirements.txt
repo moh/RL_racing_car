@@ -1,5 +1,6 @@
 gymnasium==0.29.1
 swig==4.2.1
-Box2D==2.3.10
+Box2D==2.3.5
 pygame==2.5.2
 imageio==2.34.0
+tqdm==4.66.2
