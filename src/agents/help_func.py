@@ -454,7 +454,8 @@ def test_agent(env: gym.Env,
 
 
 def sample_discrete_action(policy_nn: torch.nn.Module,
-                           state: NDArray[np.float64]) -> Tuple[int, torch.Tensor]:
+                           state: NDArray[np.float64],
+                           temperature: float) -> Tuple[int, torch.Tensor]:
     """
     Sample a discrete action based on the given state and policy network.
 
@@ -467,6 +468,8 @@ def sample_discrete_action(policy_nn: torch.nn.Module,
         The policy network that defines the probability distribution of the actions.
     state : NDArray[np.float64]
         The state based on which an action needs to be sampled.
+    temperature: float
+        Temperature passed in softmax function
 
     Returns
     -------
@@ -477,8 +480,17 @@ def sample_discrete_action(policy_nn: torch.nn.Module,
 
     # TODO...
     state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-    action_probabilities = policy_nn(state_tensor)
-    action_distribution = torch.distributions.Categorical(torch.nn.functional.softmax(action_probabilities, dim=1))
+
+    
+    logits = policy_nn(state_tensor)
+    scaled_logits = logits / temperature
+    action_probabilities = torch.nn.functional.softmax(scaled_logits, dim=-1)
+    
+    
+    print("probas = ", action_probabilities.cpu().detach().numpy())
+    
+    
+    action_distribution = torch.distributions.Categorical(action_probabilities)
     sampled_action = action_distribution.sample()
     sampled_action_log_probability = action_distribution.log_prob(sampled_action)
     sampled_action = sampled_action.item() 
@@ -490,7 +502,7 @@ def sample_one_episode(env: gym.Env,
                        policy_nn: torch.nn.Module,
                        max_episode_duration: int,
                        min_reward: float,
-                       render: bool = False) -> Tuple[List[NDArray[np.float64]], List[int], List[float], List[torch.Tensor]]:
+                       temperature: float) -> Tuple[List[NDArray[np.float64]], List[int], List[float], List[torch.Tensor]]:
     """
     Execute one episode within the `env` environment utilizing the policy defined by the `policy_nn` parameter.
 
@@ -502,9 +514,7 @@ def sample_one_episode(env: gym.Env,
         The policy neural network.
     max_episode_duration : int
         The maximum duration of the episode.
-    render : bool, optional
-        Whether to render the environment, by default False.
-
+    
     Returns
     -------
     Tuple[List[NDArray[np.float64]], List[int], List[float], List[torch.Tensor]]
@@ -518,24 +528,43 @@ def sample_one_episode(env: gym.Env,
     episode_rewards = []
     episode_states.append(state_t)
 
+    total_reward = 0
+
+    nb_reward_neg = 0
+
     for t in range(max_episode_duration):
 
-        if render:
-            env.render_wrapper.render()
-        # TODO...
-        action, log_prob_action = sample_discrete_action(policy_nn, state_t)
+        action, log_prob_action = sample_discrete_action(policy_nn, state_t, temperature)
         next_state, reward, done, info, truncated = custom_step(env, action)
         episode_states.append(next_state)
         episode_actions.append(action)
+        # test with reward clipping
+        mod_reward = np.clip(reward, -1.0, 1.0)
+        
+        if mod_reward > 0: mod_reward = 1.0
+        else: -1.0
+        reward = mod_reward
+
         episode_rewards.append(reward)
         episode_log_prob_actions.append(log_prob_action)
+        
         state_t = next_state
 
-        if done:
-            break
-        
-        total_reward = sum(episode_rewards)
+        total_reward += reward
+
+        if reward < 0:
+            nb_reward_neg += 1
+        else:
+            nb_reward_neg = 0
+
         if total_reward < min_reward:
+            done = True
+        
+        #if nb_reward_neg >= 50:
+        #    done = True
+        #    print("STOPP nb neg reward >= 50")
+
+        if done:
             break
 
     return episode_states, episode_actions, episode_rewards, episode_log_prob_actions
@@ -545,8 +574,7 @@ def avg_return_on_multiple_episodes(env: gym.Env,
                                     policy_nn: torch.nn.Module,
                                     num_test_episode: int,
                                     max_episode_duration: int,
-                                    min_reward: float,
-                                    render: bool = False) -> float:
+                                    min_reward: float) -> float:
     """
     Play multiple episodes of the environment and calculate the average return.
 
@@ -560,8 +588,6 @@ def avg_return_on_multiple_episodes(env: gym.Env,
         The number of episodes to play.
     max_episode_duration : int
         The maximum duration of an episode.
-    render : bool, optional
-        Whether to render the environment, by default False.
 
     Returns
     -------
@@ -572,7 +598,9 @@ def avg_return_on_multiple_episodes(env: gym.Env,
     # TODO...
     returns = []
     for i in range(num_test_episode):
-        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(env, policy_nn, max_episode_duration, min_reward, render)
+        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(
+            env, policy_nn, max_episode_duration, min_reward
+            )
         returns.append(sum(episode_rewards))
     average_return = sum(returns) / num_test_episode
     return average_return

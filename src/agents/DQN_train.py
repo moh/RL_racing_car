@@ -309,9 +309,12 @@ def dqn2_modified_agent_training(env, q_network, target_q_network, params):
 def reinforce_discrete_agent_training(env, policy_network, params):
 
     num_episodes = int(params["num_episodes"])
-    num_test_per_episode = int(params["num_test_per_episode"])
+    # the test is disabled in this version
+    num_test_per_episode = 1# int(params["num_test_per_episode"])
     max_episode_duration = int(params["max_episode_duration"])
     lr = float(params["lr"])
+    temperature = float(params["temperature"])
+
     min_reward = float(params["min_reward"])
     # max_nb_negative = float(params["max_nb_negative"])
 
@@ -334,6 +337,7 @@ def reinforce_discrete_agent_training(env, policy_network, params):
                                                                         num_test_per_episode=num_test_per_episode,
                                                                         max_episode_duration=max_episode_duration,
                                                                         learning_rate=lr,
+                                                                        temperature = temperature,
                                                                         min_reward=min_reward,
                                                                         data_saver=data_saver,
                                                                         policy_nn=policy_network)

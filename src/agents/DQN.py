@@ -709,6 +709,7 @@ def train_reinforce_discrete(env: gym.Env,
                              num_test_per_episode: int,
                              max_episode_duration: int,
                              learning_rate: float,
+                             temperature: float,
                              min_reward: float,
                              policy_nn: torch.nn.Module,
                              data_saver) -> Tuple[torch.nn.Module, List[float]]:
@@ -740,38 +741,51 @@ def train_reinforce_discrete(env: gym.Env,
     for episode_index in tqdm(range(num_train_episodes)):
 
         # TODO...
-        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(env, policy_nn, max_episode_duration, min_reward=min_reward)
-        returns = []
-        for i in range(len(episode_rewards)):
-            returns.append(sum(episode_rewards[i:]))
+        episode_states, episode_actions, episode_rewards, episode_log_prob_actions = sample_one_episode(
+            env, policy_nn, max_episode_duration, min_reward, temperature)
+        
+        T = len(episode_rewards)
+        G = torch.tensor([sum(episode_rewards[i:]) for i in range(T)], dtype=torch.float32, device=device)
 
-        returns = torch.tensor(returns, dtype=torch.float32, device=device)
-        log_prob_actions = torch.stack(episode_log_prob_actions)
-        loss = -torch.sum(log_prob_actions * returns)
+        # Compute policy gradient and update
+        loss = -torch.sum(G * torch.cat(episode_log_prob_actions))
         optimizer.zero_grad()
         loss.backward()
+        
+        # try gradient clipping
+        torch.nn.utils.clip_grad_norm_(policy_nn.parameters(), 1.0)
+
         optimizer.step()
 
+        
+
+        """
+        print("Testing the current policy")
         # Test the current policy
         test_avg_return = avg_return_on_multiple_episodes(env=env,
                                                           policy_nn=policy_nn,
                                                           num_test_episode=num_test_per_episode,
                                                           max_episode_duration=max_episode_duration,
-                                                          min_reward=min_reward,
-                                                          render=False)
+                                                          min_reward=min_reward)
         
+        """
         # max reward
-        max_reward = max(episode_rewards)
-        print("reward at the end = ", test_avg_return)
+        
+        total_rewards = np.cumsum(episode_rewards)
+        max_reward = max(total_rewards)
+        
+        print("len episode = ", len(episode_rewards))
+        print("reward at the end = ", total_rewards[-1])
         print("reward max        = ", max_reward)
+        #print("Avg reward ON TEST = ", test_avg_return)
 
         # save model and rewards 
         data_saver.save_model_data(policy_nn, episode_index,
                                    reward = max_reward)
         data_saver.save_rewards_data(
-            {"final" : test_avg_return, "max" : max_reward},
+            {"final" : total_rewards[-1], "max" : max_reward},
             episode_index)
         data_saver.save_gif(max_reward)
         # Monitoring
-        episode_avg_return_list.append(test_avg_return)
-    return policy_nn, episode_avg_return_list
+        #episode_avg_return_list.append(test_avg_return)
+    return policy_nn, 0 # episode_avg_return_list

@@ -86,8 +86,8 @@ def train_model():
             "limit_nb_negative_before_exploration", "max_nb_negative",  
             "results_dir", "model_file_name", "save_frequency"],
 
-        "reinforce" : ["num_episodes", "num_test_per_episode",
-                "max_episode_duration", "lr", "min_reward",
+        "reinforce" : ["num_episodes", "max_episode_duration",
+                "lr", "temperature", "min_reward",
                 "results_dir", "model_file_name", "save_frequency"]
     }
     
@@ -104,11 +104,13 @@ def train_model():
 
     print("Render mode : human, nothing (press ENTER)")
     render_mode = input("Render mode : ")
-    car_vesion = input("Original gym car env ? (y/n) : ")
+    car_version = input("Original gym car env ? (y/n) : ")
     
     car_env = car_racing.CarRacing
     
-    if car_vesion == "n":
+    params_value["car_version"] = car_version
+
+    if car_version == "n":
         car_env = car_racing_mod.CarRacing
 
     if render_mode == "":
