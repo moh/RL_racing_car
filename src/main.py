@@ -67,7 +67,8 @@ def test_saved_model():
 
 
 def train_model():
-    available_algos = ["naive_dqn", "dqn1", "dqn2", "dqn2_strict", "reinforce"]
+    available_algos = ["naive_dqn", "dqn1", "dqn2", "dqn2_strict", 
+                       "dqn2_modified", "reinforce"]
 
     common_params = ["num_episodes", "epsilon_start",
               "epsilon_decay", "gamma", "min_reward", 
@@ -80,6 +81,11 @@ def train_model():
         "dqn2_strict" : ["num_episodes", "epsilon_start",
               "epsilon_decay", "gamma", "min_reward", "max_nb_negative",  
               "results_dir", "model_file_name", "save_frequency"],
+
+        "dqn2_modified" : ["num_episodes", "gamma", "min_reward", 
+            "limit_nb_negative_before_exploration", "max_nb_negative",  
+            "results_dir", "model_file_name", "save_frequency"],
+
         "reinforce" : ["num_episodes", "num_test_per_episode",
                 "max_episode_duration", "lr", "min_reward",
                 "results_dir", "model_file_name", "save_frequency"]
@@ -128,6 +134,11 @@ def train_model():
         q_network = CNNModel(NUMBER_ACTIONS)
         target_q_network = CNNModel(NUMBER_ACTIONS)
         dqn2_strict_agent_training(env, q_network, target_q_network, params_value)
+
+    elif algo == "dqn2_modified":
+        q_network = CNNModel(NUMBER_ACTIONS)
+        target_q_network = CNNModel(NUMBER_ACTIONS)
+        dqn2_modified_agent_training(env, q_network, target_q_network, params_value)
 
     elif algo == "reinforce":
         policy_network = CNNModel(NUMBER_ACTIONS)

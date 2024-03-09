@@ -19,5 +19,16 @@
     "results_dir": "../results",
     "model_file_name": "test_strict_long",
     "save_frequency": "20"
+  },
+  "test_mod183782": {
+    "num_episodes": "2000",
+    "gamma": "0.99",
+    "min_reward": "-30",
+    "limit_nb_negative_before_exploration": "10",
+    "max_nb_negative": "50",
+    "results_dir": "../results",
+    "model_file_name": "test_mod183782",
+    "save_frequency": "50"
   }
+
 }

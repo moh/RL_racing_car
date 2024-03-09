@@ -247,6 +247,9 @@ class DataSaver:
         self.last_saved_file = ""
         self.__create_json_file()
 
+        # this is for saving best model
+        self.last_max_reward_for_model = 0
+
         # this is for recording the game, a list of rgb array representing the screen
         self.rgb_data = []
         self.last_max_reward = 0
@@ -265,7 +268,7 @@ class DataSaver:
 
 
 
-    def save_model_data(self, q_network, episode, last = False):
+    def save_model_data(self, q_network, episode, last = False, reward = None):
         
         model_file = os.path.join(self.results_dir, self.model_file_name + "_" + str(episode) + ".pth")
 
@@ -277,6 +280,16 @@ class DataSaver:
             if self.last_saved_file != "" and os.path.exists(self.last_saved_file):
                 os.remove(self.last_saved_file)
             self.last_saved_file = model_file
+
+        model_max_file = os.path.join(self.results_dir + "/models", self.model_file_name + "_max.pth")
+        
+        if ((reward != None) and (reward >= self.last_max_reward_for_model)):
+            if not os.path.exists(self.results_dir + "/models"):
+                os.makedirs(self.results_dir + "/models", exist_ok=True)
+
+            self.last_max_reward_for_model = reward
+            print("Saving max Model")
+            torch.save(q_network, model_max_file)
 
     
     def save_rewards_data(self, rewards_dict, episode):
