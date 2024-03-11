@@ -452,6 +452,47 @@ def test_agent(env: gym.Env,
 
     return test_parameters
 
+def test_ppo_agent(env: gym.Env,
+                q_network: torch.nn.Module,
+                num_steps: int,
+                min_rewad: int) -> List[float]:
+    """
+    Test a trained q_network
+    """
+    q_network.to(device)
+    q_network.eval()
+
+    total_reward_list = []    
+    
+    for episode_index in tqdm(range(1, num_steps)):
+        state, info = env.reset()
+        
+        # some action before learning, defined in help_func.py
+        after_reset_action(env)
+
+        total_reward = 0
+
+        for t in itertools.count():
+            state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            logits = torch.nn.Softmax()(q_network(state_tensor)[0])
+            
+            dist=torch.distributions.categorical.Categorical(probs=logits)
+            a = torch.argmax(logits).item() #dist.sample().item() 
+            
+            print(a)
+            s_after, r, done = custom_step(env, a)[:3]
+            total_reward += r
+            
+
+            if (total_reward < min_rewad): done = True
+
+            if done: break
+
+            state = s_after
+
+        total_reward_list.append(total_reward)
+
+    return total_reward_list
 
 def sample_discrete_action(policy_nn: torch.nn.Module,
                            state: NDArray[np.float64],
