@@ -1,5 +1,6 @@
 from agents.DQN_train import *
 from agents.PPO import *
+from agents.TRPO import *
 
 import car_racing
 import car_racing_mod
@@ -104,7 +105,7 @@ def test_saved_model():
 
 def train_model():
     available_algos = ["naive_dqn", "dqn1", "dqn2", "dqn2_strict", 
-                       "dqn2_modified", "reinforce", "ppo"]
+                       "dqn2_modified", "reinforce", "ppo", "trpo"]
 
     common_params = ["num_episodes", "epsilon_start",
               "epsilon_decay", "gamma", "min_reward", 
@@ -128,7 +129,12 @@ def train_model():
         "ppo" : ["num_steps",
                  "learning_rate", "ppo_epochs", "mini_batch_size",
                  "max_frames", "threshold_reward",
-                "results_dir", "model_file_name", "save_frequency"]
+                "results_dir", "model_file_name", "save_frequency"],
+
+        "trpo" : ["num_steps",
+                 "learning_rate", "max_frames", "threshold_reward",
+                "results_dir", "model_file_name", "save_frequency",
+                "damping", "cg_iters", "max_kl"]
     }
     
     params_value = dict()
@@ -189,6 +195,10 @@ def train_model():
     elif algo == "ppo":
         actorCritic_network = ActorCritic(NUMBER_ACTIONS)
         ppo_agent_training(env, actorCritic_network, params_value)
+
+    elif algo == "trpo":
+        actorCritic_network = ActorCritic(NUMBER_ACTIONS)
+        trpo_agent_training(env, actorCritic_network, params_value)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+{
+  "reinforce": {
+    "num_episodes": "750",
+    "num_test_per_episode": "5",
+    "max_episode_duration": "400",
+    "lr": "0.01",
+    "min_reward": "-25",
+    "results_dir": "results",
+    "model_file_name": "reinforce",
+    "save_frequency": "100"
+  }
+}
